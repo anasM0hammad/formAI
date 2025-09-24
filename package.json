@@ -1,0 +1,21 @@
+{
+  "name": "formai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mohammad Anas",
+  "license": "ISC",
+  "dependencies": {
+    "@chroma-core/default-embed": "^0.1.8",
+    "agentql": "^1.14.0",
+    "axios": "^1.12.2",
+    "chromadb": "^3.0.15",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "openai": "^5.22.0"
+  }
+}
