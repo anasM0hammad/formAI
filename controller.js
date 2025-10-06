@@ -35,6 +35,9 @@ const fetchFormFields = async (href, browser, additionalFields={}) => {
         applying_for_position,
         years_of_experience,
         expected_salary,
+        when_can_I_start,
+        end_date_of_latest_role,
+        start_date_of_latest_role,
         phone_number,
         area_code,
         cover_letter,
@@ -49,24 +52,32 @@ const fetchFormFields = async (href, browser, additionalFields={}) => {
 
 const askLLM = async (question) => {
     const openai = new OpenAI({
-        apiKey: process.env.GEMINI_API_KEY,
-        baseURL:  process.env.BASE_URL,
+        // apiKey: process.env.GEMINI_API_KEY,
+        // baseURL:  process.env.BASE_URL,
+        apiKey: 'ollama',
+        baseURL: 'http://localhost:11434/v1',
     });
 
-    const system = `You are a very helpful assistant and expert in filling application form. You have to answer to the form questions based on context provided. Only provide the answer to the question and nothing more than that. strictly return '' if you do not the know the exact answer to the question.`;
+    const system = `You are a very helpful assistant and expert in filling application form. You have to answer to the form questions based on context provided. Only provide the answer to the question and nothing else I repeat nothing else. strictly provide 'null' if you do not the know the exact answer to the question or have any doubt about the question.`;
 
     const ragDocuments = await getQuery(question, process.env.CHROMA_COLLECTION);
     const query = ragDocuments.documents[0].join(', ');
 
-    const response = await openai.chat.completions.create({
-        model: 'gemini-2.0-flash',
-        messages: [
-            { role: "system", content: system},
-            { role: "user", content: `Context: ${query} \n Answer the form field : ${question} for me`}
-        ] 
-    });
-    const answer = response.choices[0].message.content?.trim();
-    return answer;
+    try{
+        const response = await openai.chat.completions.create({
+            model: 'llama3.2',
+            messages: [
+                { role: "system", content: system},
+                { role: "user", content: `Context: ${query} \n Answer the form field : ${question} for me`}
+            ] 
+        });
+        const answer = response.choices[0].message.content?.trim();
+        return answer;
+    }
+    catch(error){
+        console.log(error);
+    }
+   
 }
 
 const queryController = async (req, res, next) => {
@@ -85,20 +96,24 @@ const queryController = async (req, res, next) => {
         });
         return;
     }
-    const browser = await chromium.launch({ headless: false });
-    const fields = await fetchFormFields(href, browser);
+    const browser = await chromium.launch({ headless: false, args: ['--start-maximized']  });
+    const context = await browser.newContext({
+        viewport: null, // Allow the browser to set its own viewport size
+    });
+    const fields = await fetchFormFields(href, context);
     const data = await fields.toData();
 
     // Ask from LLM with retrieved data
     const questions = pruneUndefined(data);
     for(const key in questions){
-         const answer = await askLLM(key);
-    
+        const answer = await askLLM(key);
         // Fill the form
-        if(answer){
+        if(answer && answer.length && answer != 'null'){
             await fields[key].type(answer);
         }
-        console.log(key, answer);
+        else{
+            await fields[key].type('NA');
+        }
     }
 
     await fields.submit_btn.click();
