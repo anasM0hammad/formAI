@@ -10,12 +10,15 @@
   "license": "ISC",
   "dependencies": {
     "@chroma-core/default-embed": "^0.1.8",
+    "@langchain/core": "^0.3.78",
+    "@langchain/ollama": "^0.2.4",
     "agentql": "^1.14.0",
     "axios": "^1.12.2",
     "chromadb": "^3.0.15",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "langchain": "^1.0.0-alpha.7",
     "openai": "^5.22.0"
   }
 }

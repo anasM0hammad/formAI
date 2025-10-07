@@ -1,10 +1,11 @@
 const dotenv = require('dotenv');
 const OpenAI = require('openai');
-const axios = require('axios');
 const { chromium }  = require('playwright');
 const { wrap, configure } = require('agentql');
 const { pruneUndefined } = require('./utils');
 const { addDocument, getCollection, getQuery } = require('./embedding');
+const { SystemMessage, HumanMessage } = require('langchain');
+const { ChatOllama } = require('@langchain/ollama');
 
 dotenv.config();
 configure({
@@ -51,11 +52,9 @@ const fetchFormFields = async (href, browser, additionalFields={}) => {
 }
 
 const askLLM = async (question) => {
-    const openai = new OpenAI({
-        // apiKey: process.env.GEMINI_API_KEY,
-        // baseURL:  process.env.BASE_URL,
-        apiKey: 'ollama',
-        baseURL: 'http://localhost:11434/v1',
+    const llm =  new ChatOllama({
+        model: 'llama3.2',
+        baseUrl: 'http://localhost:11434'
     });
 
     const system = `You are a very helpful assistant and expert in filling application form. You have to answer to the form questions based on context provided. Only provide the answer to the question and nothing else I repeat nothing else. strictly provide 'null' if you do not the know the exact answer to the question or have any doubt about the question.`;
@@ -64,20 +63,16 @@ const askLLM = async (question) => {
     const query = ragDocuments.documents[0].join(', ');
 
     try{
-        const response = await openai.chat.completions.create({
-            model: 'llama3.2',
-            messages: [
-                { role: "system", content: system},
-                { role: "user", content: `Context: ${query} \n Answer the form field : ${question} for me`}
-            ] 
-        });
-        const answer = response.choices[0].message.content?.trim();
-        return answer;
+        const messages = [
+            new SystemMessage(system),
+            new HumanMessage(`Context: ${query} \n Answer the form field : ${question} for me`),
+        ]
+        const response = await llm.invoke(messages);
+        return response.content;
     }
     catch(error){
         console.log(error);
     }
-   
 }
 
 const queryController = async (req, res, next) => {
